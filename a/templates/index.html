@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block content %}
+<title>Home - Lending Protocol</title>
+    <header>
+        <h1>Welcome to Our Lending Protocol</h1>
+    </header>
+    
+    <div class="container">
+        <div class="description">
+            <p>Our decentralized lending protocol allows users to deposit assets, borrow against their collateral, repay loans, and liquidate positions at risk. Explore our services and get started!</p>
+        </div>
+        
+        <section class="asset-prices">
+            <h2>Supported Assets and Market Prices</h2>
+            <div class="price-list" id="price-list">
+                <!-- Asset prices will be dynamically loaded here -->
+            </div>
+        </section>
+    </div>
+    
+    <script>
+        let userAccount;
+
+        window.addEventListener('load', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                web3 = new Web3(window.ethereum);
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const accounts = await web3.eth.getAccounts();
+                    userAccount = accounts[0];
+                    console.log('Connected account:', userAccount);
+                    document.getElementById('connectWallet').textContent = 'Wallet Connected';
+                } catch (error) {
+                    console.error("User denied account access");
+                }
+            } else {
+                console.log('Please install MetaMask!');
+            }
+        });
+
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const accounts = await web3.eth.getAccounts();
+                    userAccount = accounts[0];
+                    console.log('Connected account:', userAccount);
+                    document.getElementById('connectWallet').textContent = 'Wallet Connected';
+                } catch (error) {
+                    console.error("User denied account access");
+                }
+            } else {
+                alert('Please install MetaMask!');
+            }
+        });
+
+        const assets = {
+            ETH: { name: 'Ethereum', priceFeedAddress: '0x694AA1769357215DE4FAC081bf1f309aDC325306' },
+            USDC: { name: 'USD Coin', priceFeedAddress: '0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E' },
+            USDT: { name: 'Tether', priceFeedAddress: '0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E' },
+            WBTC: { name: 'Wrapped Bitcoin', priceFeedAddress: '0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43' }
+        };
+
+        const priceListElement = document.getElementById('price-list');
+
+        const priceFeedABI = [
+            {
+                "inputs": [],
+                "name": "latestRoundData",
+                "outputs": [
+                    { "internalType": "uint80", "name": "roundId", "type": "uint80" },
+                    { "internalType": "int256", "name": "answer", "type": "int256" },
+                    { "internalType": "uint256", "name": "startedAt", "type": "uint256" },
+                    { "internalType": "uint256", "name": "updatedAt", "type": "uint256" },
+                    { "internalType": "uint80", "name": "answeredInRound", "type": "uint80" }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        async function initWeb3() {
+            if (typeof window.ethereum !== 'undefined') {
+                web3 = new Web3(window.ethereum);
+                loadPrices(web3);
+            } else {
+                console.log('Please install MetaMask!');
+            }
+        }
+
+        async function loadPrices(web3) {
+            priceListElement.innerHTML = '';
+            for (const asset in assets) {
+                const priceItem = document.createElement('div');
+                priceItem.className = 'price-item';
+                priceItem.innerHTML = `
+                    <h3>${assets[asset].name}</h3>
+                    <p>Loading price...</p>
+                `;
+                priceListElement.appendChild(priceItem);
+                loadAssetPrice(web3, asset, priceItem);
+            }
+        }
+
+        async function loadAssetPrice(web3, asset, priceItem) {
+            try {
+                const priceFeed = new web3.eth.Contract(priceFeedABI, assets[asset].priceFeedAddress);
+                const result = await priceFeed.methods.latestRoundData().call();
+                console.log(`${asset} price data:`, result);
+                const price = (Number(result.answer) / 1e8).toFixed(2);
+                priceItem.innerHTML = `
+                    <h3>${assets[asset].name}</h3>
+                    <p>$${price}</p>
+                `;
+            } catch (error) {
+                console.error(`Error loading ${asset} price:`, error);
+                priceItem.innerHTML = `
+                    <h3>${assets[asset].name}</h3>
+                    <p>Failed to load price</p>
+                `;
+            }
+        }
+
+        initWeb3();
+    </script>
+{% endblock %}

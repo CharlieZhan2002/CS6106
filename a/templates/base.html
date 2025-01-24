@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../static/style/style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+</head>
+<body>
+    <div class="topnav">
+        <a href="/">Home</a>
+        <a href="/deposit">Deposit</a>
+        <a href="/borrow" >Borrow</a>
+        <a href="/repay" >Repay</a>
+        <a href="/liquidation" >Liquidation</a>
+        <a href="/admin">Admin</a>
+        <a href="/p2plending" style="background-color: rgb(115, 41, 185);padding-left: 10px;">P2P Lending</a>
+        <button id="connectWallet" class="nav-button">Connect Wallet</button>
+      </div>
+      {% block content %}
+      {% endblock %}
+    
+      <script>
+        let web3;
+        let userAccount;
+
+        window.addEventListener('load', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                web3 = new Web3(window.ethereum);
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const accounts = await web3.eth.getAccounts();
+                    userAccount = accounts[0];
+                    console.log('Connected account:', userAccount);
+                    document.getElementById('connectWallet').textContent = 'Wallet Connected';
+                } catch (error) {
+                    console.error("User denied account access");
+                }
+            } else {
+                console.log('Please install MetaMask!');
+            }
+        });
+
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const accounts = await web3.eth.getAccounts();
+                    userAccount = accounts[0];
+                    console.log('Connected account:', userAccount);
+                    document.getElementById('connectWallet').textContent = 'Wallet Connected';
+                } catch (error) {
+                    console.error("User denied account access");
+                }
+            } else {
+                alert('Please install MetaMask!');
+            }
+        });
+    </script>
+</body>
+</html>
