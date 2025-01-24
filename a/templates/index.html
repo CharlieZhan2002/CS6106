@@ -19,50 +19,15 @@
     </div>
     
     <script>
-        let userAccount;
-
-        window.addEventListener('load', async () => {
-            if (typeof window.ethereum !== 'undefined') {
-                web3 = new Web3(window.ethereum);
-                try {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    const accounts = await web3.eth.getAccounts();
-                    userAccount = accounts[0];
-                    console.log('Connected account:', userAccount);
-                    document.getElementById('connectWallet').textContent = 'Wallet Connected';
-                } catch (error) {
-                    console.error("User denied account access");
-                }
-            } else {
-                console.log('Please install MetaMask!');
-            }
-        });
-
-        document.getElementById('connectWallet').addEventListener('click', async () => {
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    const accounts = await web3.eth.getAccounts();
-                    userAccount = accounts[0];
-                    console.log('Connected account:', userAccount);
-                    document.getElementById('connectWallet').textContent = 'Wallet Connected';
-                } catch (error) {
-                    console.error("User denied account access");
-                }
-            } else {
-                alert('Please install MetaMask!');
-            }
-        });
-
         const assets = {
             ETH: { name: 'Ethereum', priceFeedAddress: '0x694AA1769357215DE4FAC081bf1f309aDC325306' },
             USDC: { name: 'USD Coin', priceFeedAddress: '0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E' },
             USDT: { name: 'Tether', priceFeedAddress: '0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E' },
             WBTC: { name: 'Wrapped Bitcoin', priceFeedAddress: '0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43' }
         };
-
+    
         const priceListElement = document.getElementById('price-list');
-
+    
         const priceFeedABI = [
             {
                 "inputs": [],
@@ -78,16 +43,8 @@
                 "type": "function"
             }
         ];
-
-        async function initWeb3() {
-            if (typeof window.ethereum !== 'undefined') {
-                web3 = new Web3(window.ethereum);
-                loadPrices(web3);
-            } else {
-                console.log('Please install MetaMask!');
-            }
-        }
-
+    
+        // 加载资产价格
         async function loadPrices(web3) {
             priceListElement.innerHTML = '';
             for (const asset in assets) {
@@ -101,7 +58,8 @@
                 loadAssetPrice(web3, asset, priceItem);
             }
         }
-
+    
+        // 获取单个资产价格
         async function loadAssetPrice(web3, asset, priceItem) {
             try {
                 const priceFeed = new web3.eth.Contract(priceFeedABI, assets[asset].priceFeedAddress);
@@ -120,7 +78,21 @@
                 `;
             }
         }
-
-        initWeb3();
+    
+        // 初始化 Web3 并加载价格
+        async function initWeb3() {
+            if (typeof window.ethereum !== 'undefined') {
+                const web3 = new Web3(window.ethereum);
+                loadPrices(web3);
+            } else {
+                console.log('Please install MetaMask to load prices.');
+            }
+        }
+    
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            initWeb3();
+        });
     </script>
+    
 {% endblock %}
