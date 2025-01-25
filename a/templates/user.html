@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block content %}
+<title>User Dashboard - Lending Protocol</title>
+
+<header>
+    <div class="container">
+        <h1>User Dashboard</h1>
+    </div>
+</header>
+
+<div class="container">
+    <div class="user-deposits">
+        <h2>Your Deposits</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Asset</th>
+                    <th>Amount</th>
+                    <th>Value (USD)</th>
+                </tr>
+            </thead>
+            <tbody id="depositsTable">
+                <!-- Dynamically populated -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="user-borrows">
+        <h2>Your Borrows</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Asset</th>
+                    <th>Amount</th>
+                    <th>Value (USD)</th>
+                </tr>
+            </thead>
+            <tbody id="borrowsTable">
+                <!-- Dynamically populated -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="borrow-availability">
+        <h2>Borrow Availability</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Asset</th>
+                    <th>Max Borrowable (USD)</th>
+                </tr>
+            </thead>
+            <tbody id="borrowableTable">
+                <!-- Dynamically populated -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="message"></div>
+
+    <button id="refreshData">Refresh Data</button>
+</div>
+
+<script>
+    const assetAddresses = {
+        'ETH': '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+        'USDC': '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8',
+        'USDT': '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0',
+        'WBTC': '0x29f2D40B0605204364af54EC677bD022dA425d03'
+    };
+
+    const contractAddress = "0x0f376642cd8daa29126476b2f9fa5e58632b6116";
+    let contract;
+    let userAccount;
+
+    async function fetchData() {
+        try {
+            // Clear message div
+            document.getElementById('message').textContent = '';
+
+            // Fetch user deposits
+            const depositsTable = document.getElementById('depositsTable');
+            depositsTable.innerHTML = '';
+            for (const [asset, address] of Object.entries(assetAddresses)) {
+                const deposit = await contract.methods.userDeposits(address, userAccount).call();
+                const value = await contract.methods.getAssetValue(address, deposit.amount).call();
+                if (deposit.amount > 0) {
+                    depositsTable.innerHTML += `
+                        <tr>
+                            <td>${asset}</td>
+                            <td>${web3.utils.fromWei(deposit.amount)}</td>
+                            <td>${(value / 1e8).toFixed(2)}</td>
+                        </tr>`;
+                }
+            }
+
+            // Fetch user borrows
+            const borrowsTable = document.getElementById('borrowsTable');
+            borrowsTable.innerHTML = '';
+            for (const [asset, address] of Object.entries(assetAddresses)) {
+                const borrow = await contract.methods.userBorrows(address, userAccount).call();
+                const value = await contract.methods.getAssetValue(address, borrow.amount).call();
+                if (borrow.amount > 0) {
+                    borrowsTable.innerHTML += `
+                        <tr>
+                            <td>${asset}</td>
+                            <td>${web3.utils.fromWei(borrow.amount)}</td>
+                            <td>${(value / 1e8).toFixed(2)}</td>
+                        </tr>`;
+                }
+            }
+
+            // Fetch max borrowable amounts
+            const borrowableTable = document.getElementById('borrowableTable');
+            borrowableTable.innerHTML = '';
+            const { 0: maxAmounts, 1: assets } = await contract.methods.getMaxBorrowableAmounts(userAccount).call();
+            for (let i = 0; i < assets.length; i++) {
+                const asset = Object.keys(assetAddresses).find(key => assetAddresses[key] === assets[i]);
+                const maxAmount = maxAmounts[i];
+                borrowableTable.innerHTML += `
+                    <tr>
+                        <td>${asset}</td>
+                        <td>${(maxAmount / 1e8).toFixed(2)}</td>
+                    </tr>`;
+            }
+        } catch (error) {
+            console.error(error);
+            document.getElementById('message').textContent = 'Error: ' + error.message;
+        }
+    }
+
+    window.addEventListener('load', async () => {
+        if (typeof window.ethereum !== 'undefined') {
+            web3 = new Web3(window.ethereum);
+            contract = new web3.eth.Contract(contractABI, contractAddress);
+            try {
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const accounts = await web3.eth.getAccounts();
+                userAccount = accounts[0];
+                await fetchData();
+            } catch (error) {
+                console.error("User denied account access", error);
+                document.getElementById('message').textContent = 'Error connecting to wallet: ' + error.message;
+            }
+        } else {
+            alert('Please install MetaMask to interact with the protocol.');
+        }
+    });
+
+    document.getElementById('refreshData').addEventListener('click', fetchData);
+</script>
+
+{% endblock %}
