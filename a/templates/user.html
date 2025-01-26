@@ -62,6 +62,7 @@
 </div>
 
 <script>
+    // 资产地址映射
     const assetAddresses = {
         'ETH': '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
         'USDC': '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8',
@@ -69,21 +70,25 @@
         'WBTC': '0x29f2D40B0605204364af54EC677bD022dA425d03'
     };
 
-    const contractAddress = "0x0f376642cd8daa29126476b2f9fa5e58632b6116";
-    let contract;
-    let userAccount;
-
+    // 动态填充数据的函数
     async function fetchData() {
-        try {
-            // Clear message div
-            document.getElementById('message').textContent = '';
+        const messageDiv = document.getElementById('message');
+        const depositsTable = document.getElementById('depositsTable');
+        const borrowsTable = document.getElementById('borrowsTable');
+        const borrowableTable = document.getElementById('borrowableTable');
 
-            // Fetch user deposits
-            const depositsTable = document.getElementById('depositsTable');
+        try {
+            // 清空提示和表格
+            messageDiv.textContent = '';
             depositsTable.innerHTML = '';
+            borrowsTable.innerHTML = '';
+            borrowableTable.innerHTML = '';
+
+            // 获取用户存款
             for (const [asset, address] of Object.entries(assetAddresses)) {
                 const deposit = await contract.methods.userDeposits(address, userAccount).call();
                 const value = await contract.methods.getAssetValue(address, deposit.amount).call();
+
                 if (deposit.amount > 0) {
                     depositsTable.innerHTML += `
                         <tr>
@@ -94,12 +99,11 @@
                 }
             }
 
-            // Fetch user borrows
-            const borrowsTable = document.getElementById('borrowsTable');
-            borrowsTable.innerHTML = '';
+            // 获取用户借款
             for (const [asset, address] of Object.entries(assetAddresses)) {
                 const borrow = await contract.methods.userBorrows(address, userAccount).call();
                 const value = await contract.methods.getAssetValue(address, borrow.amount).call();
+
                 if (borrow.amount > 0) {
                     borrowsTable.innerHTML += `
                         <tr>
@@ -110,44 +114,33 @@
                 }
             }
 
-            // Fetch max borrowable amounts
-            const borrowableTable = document.getElementById('borrowableTable');
-            borrowableTable.innerHTML = '';
+            // 获取可借款额度
             const { 0: maxAmounts, 1: assets } = await contract.methods.getMaxBorrowableAmounts(userAccount).call();
             for (let i = 0; i < assets.length; i++) {
                 const asset = Object.keys(assetAddresses).find(key => assetAddresses[key] === assets[i]);
-                const maxAmount = maxAmounts[i];
                 borrowableTable.innerHTML += `
                     <tr>
                         <td>${asset}</td>
-                        <td>${(maxAmount / 1e8).toFixed(2)}</td>
+                        <td>${(maxAmounts[i] / 1e8).toFixed(2)}</td>
                     </tr>`;
             }
         } catch (error) {
-            console.error(error);
-            document.getElementById('message').textContent = 'Error: ' + error.message;
+            console.error('Error fetching data:', error);
+            messageDiv.textContent = 'Error: ' + error.message;
         }
     }
 
-    window.addEventListener('load', async () => {
-        if (typeof window.ethereum !== 'undefined') {
-            web3 = new Web3(window.ethereum);
-            contract = new web3.eth.Contract(contractABI, contractAddress);
-            try {
-                await window.ethereum.request({ method: 'eth_requestAccounts' });
-                const accounts = await web3.eth.getAccounts();
-                userAccount = accounts[0];
-                await fetchData();
-            } catch (error) {
-                console.error("User denied account access", error);
-                document.getElementById('message').textContent = 'Error connecting to wallet: ' + error.message;
-            }
-        } else {
-            alert('Please install MetaMask to interact with the protocol.');
+    // 页面加载和刷新按钮的事件绑定
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!userAccount || !contract) {
+            document.getElementById('message').textContent = 'Please connect your wallet first!';
+            return;
         }
-    });
+        fetchData();
 
-    document.getElementById('refreshData').addEventListener('click', fetchData);
+        // 绑定刷新按钮
+        document.getElementById('refreshData').addEventListener('click', fetchData);
+    });
 </script>
 
 {% endblock %}

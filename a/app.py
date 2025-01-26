@@ -859,6 +859,14 @@ def liquidation():
 def admin():
     return render_template('admin.html')
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/user')
+def user_dashboard():
+    return render_template('user.html')
+
 
 # @app.route('/indexP2PMainPage', methods=["GET", "POST"])
 # def indexP2PMainPage():

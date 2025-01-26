@@ -9,14 +9,15 @@
 </head>
 <body>
     <div class="topnav">
-        <a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a>
-        <a href="/deposit" class="{% if request.path == '/deposit' %}active{% endif %}">Deposit</a>
-        <a href="/borrow" class="{% if request.path == '/borrow' %}active{% endif %}">Borrow</a>
-        <a href="/repay" class="{% if request.path == '/repay' %}active{% endif %}">Repay</a>
-        <a href="/liquidation" class="{% if request.path == '/liquidation' %}active{% endif %}">Liquidation</a>
-        <a href="/admin" class="{% if request.path == '/admin' %}active{% endif %}">Admin</a>
-        <button id="connectWallet" class="nav-button">Connect Wallet</button>
-    </div>    
+    <a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a>
+    <a href="/deposit" class="{% if request.path == '/deposit' %}active{% endif %}">Deposit</a>
+    <a href="/borrow" class="{% if request.path == '/borrow' %}active{% endif %}">Borrow</a>
+    <a href="/repay" class="{% if request.path == '/repay' %}active{% endif %}">Repay</a>
+    <a href="/liquidation" class="{% if request.path == '/liquidation' %}active{% endif %}">Liquidation</a>
+    <a href="/user" class="{% if request.path == '/user' %}active{% endif %}">Dashboard</a>
+    <a href="/admin" class="{% if request.path == '/admin' %}active{% endif %}">Admin</a>
+    <button id="connectWallet" class="nav-button">Connect Wallet</button>
+</div>  
       {% block content %}
       {% endblock %}
     
