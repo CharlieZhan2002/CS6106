@@ -14,7 +14,7 @@
     <a href="/borrow" class="{% if request.path == '/borrow' %}active{% endif %}">Borrow</a>
     <a href="/repay" class="{% if request.path == '/repay' %}active{% endif %}">Repay</a>
     <a href="/liquidation" class="{% if request.path == '/liquidation' %}active{% endif %}">Liquidation</a>
-    <a href="/user" class="{% if request.path == '/user' %}active{% endif %}">Dashboard</a>
+    <a href="/user" class="{% if request.path == '/user' %}active{% endif %}">User</a>
     <a href="/admin" class="{% if request.path == '/admin' %}active{% endif %}">Admin</a>
     <button id="connectWallet" class="nav-button">Connect Wallet</button>
 </div>  
@@ -992,7 +992,7 @@
 
       try {
         if (!web3) {
-          alert('MetaMask not found or not installed. Please install or enable it.');
+          alert('MetaMask not found or not installed.');
           connectWalletButton.textContent = 'Connect Wallet';
           return;
         }
@@ -1029,6 +1029,11 @@
 
         // 更新按钮文字
         connectWalletButton.textContent = `Connected: ${userAccount.slice(0, 6)}...`;
+
+        // ★★★ 新增: 如果 user.html 定義了 fetchUserData，就呼叫它
+        if (typeof window.fetchUserData === 'function') {
+          window.fetchUserData();
+        }
 
       } catch (error) {
         console.error('Error:', error);
