@@ -1,6 +1,7 @@
 from flask import Flask, redirect, render_template, request, jsonify, url_for
 from web3 import Web3
 import os
+print("Current working directory:", os.getcwd())
 import sqlite3
 
 
@@ -13,7 +14,8 @@ infura_url = os.environ.get('INFURA_URL', "https://sepolia.infura.io/v3/your-inf
 web3 = Web3(Web3.HTTPProvider(infura_url))
 
 # 合約地址與 ABI
-contract_address = "0x0f376642cd8daa29126476b2f9fa5e58632b6116"
+checksummed_address = Web3.to_checksum_address("0x0f376642cd8daa29126476b2f9fa5e58632b6116")
+#contract_address = "0x0f376642cd8daa29126476b2f9fa5e58632b6116"
 abi = [
 {
 "inputs": [],
@@ -43,16 +45,16 @@ abi = [
 "type": "error"
 },
 {
-"anonymous": false,
+"anonymous": False,
 "inputs": [
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "asset",
 "type": "address"
 },
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "priceFeed",
 "type": "address"
@@ -85,28 +87,28 @@ abi = [
 "type": "function"
 },
 {
-"anonymous": false,
+"anonymous": False,
 "inputs": [
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "user",
 "type": "address"
 },
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "borrowAsset",
 "type": "address"
 },
 {
-"indexed": false,
+"indexed": False,
 "internalType": "uint256",
 "name": "amount",
 "type": "uint256"
 },
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "collateralAsset",
 "type": "address"
@@ -134,22 +136,22 @@ abi = [
 "type": "function"
 },
 {
-"anonymous": false,
+"anonymous": False,
 "inputs": [
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "user",
 "type": "address"
 },
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "asset",
 "type": "address"
 },
 {
-"indexed": false,
+"indexed": False,
 "internalType": "uint256",
 "name": "amount",
 "type": "uint256"
@@ -205,34 +207,34 @@ abi = [
 "type": "function"
 },
 {
-"anonymous": false,
+"anonymous": False,
 "inputs": [
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "borrower",
 "type": "address"
 },
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "borrowAsset",
 "type": "address"
 },
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "collateralAsset",
 "type": "address"
 },
 {
-"indexed": false,
+"indexed": False,
 "internalType": "uint256",
 "name": "liquidationAmount",
 "type": "uint256"
 },
 {
-"indexed": false,
+"indexed": False,
 "internalType": "uint256",
 "name": "liquidatedCollateral",
 "type": "uint256"
@@ -242,16 +244,16 @@ abi = [
 "type": "event"
 },
 {
-"anonymous": false,
+"anonymous": False,
 "inputs": [
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "previousOwner",
 "type": "address"
 },
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "newOwner",
 "type": "address"
@@ -286,22 +288,22 @@ abi = [
 "type": "function"
 },
 {
-"anonymous": false,
+"anonymous": False,
 "inputs": [
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "user",
 "type": "address"
 },
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "asset",
 "type": "address"
 },
 {
-"indexed": false,
+"indexed": False,
 "internalType": "uint256",
 "name": "amount",
 "type": "uint256"
@@ -360,22 +362,22 @@ abi = [
 "type": "function"
 },
 {
-"anonymous": false,
+"anonymous": False,
 "inputs": [
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "user",
 "type": "address"
 },
 {
-"indexed": true,
+"indexed": True,
 "internalType": "address",
 "name": "asset",
 "type": "address"
 },
 {
-"indexed": false,
+"indexed": False,
 "internalType": "uint256",
 "name": "amount",
 "type": "uint256"
@@ -845,11 +847,12 @@ abi = [
 ]
 
 # 建立合約實例
-contract = web3.eth.contract(address=contract_address, abi=abi)
+contract = web3.eth.contract(address=checksummed_address, abi=abi)
+#contract = web3.eth.contract(address=contract_address, abi=abi)
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+# @app.route('/')
+# def home():
+#     return render_template('index.html')
 
 @app.route('/deposit')
 def deposit():
@@ -981,3 +984,4 @@ def create_database():
 if __name__ == '__main__':
     create_database()
     app.run(debug=True)
+
