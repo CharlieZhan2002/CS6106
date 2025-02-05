@@ -83,10 +83,35 @@
 
     // 頁面載入時檢查 userAccount 和 contract，若已連接錢包則讀取資料
     document.addEventListener('DOMContentLoaded', async () => {
+    // 檢查是否連接錢包和合約
     if (!userAccount || !contract) {
         document.getElementById('message').textContent = 'Please connect your wallet first!';
         return;
     }
+
+    try {
+        // 嘗試獲取 activeAssets 資料
+        activeAssets = await contract.methods.activeAssets().call();
+        console.log('Active assets retrieved:', activeAssets);
+
+        // 檢查 activeAssets 是否為空
+        if (!activeAssets || activeAssets.length === 0) {
+            console.warn('No active assets found.');
+            document.getElementById('message').textContent = 'No active assets found!';
+            return;
+        }
+
+        // 呼叫 fetchUserData 以加載用戶資料
+        console.log('Calling fetchUserData');
+        await window.fetchUserData();
+        console.log('fetchUserData completed');
+
+    } catch (err) {
+        console.error('Error fetching active assets:', err);
+        document.getElementById('message').textContent = 'Failed to load active assets!';
+    }
+});
+
     try {
         // 3. 初始化 activeAssets
         activeAssets = await contract.methods.activeAssets().call();
@@ -97,10 +122,9 @@
     }
 
     // 4. 呼叫動態填充數據的函數
+    console.log('Calling fetchUserData');
     await window.fetchUserData();
-});
-
-
+    console.log('fetchUserData completed');
 
     // 5.动态填充数据的函数
     window.fetchUserData = async function () {
@@ -116,16 +140,27 @@
         borrowableTable.innerHTML = '';
 
         // === 1. 获取用户存款 ===
+        activeAssets = activeAssets.map(addr => addr.toLowerCase());
+
         for (const [assetName, assetAddr] of Object.entries(assetAddresses)) {
             try {
-                if (!activeAssets.map(addr => addr.toLowerCase()).includes(assetAddr.toLowerCase())) continue;
+                // 確認 activeAssets 是否包含該資產地址（小寫比較）
+                if (!activeAssets.includes(assetAddr.toLowerCase())) {
+                    console.warn(`Asset ${assetName} not active. Skipping.`);
+                    continue;
+                }
 
+                console.log(`Fetching data for active asset: ${assetName}`);
+
+                // 從合約中獲取用戶存款資料
                 const deposit = await contract.methods.userDeposits(assetAddr, userAccount).call();
                 const priceRaw = await contract.methods.getAssetPrice(assetAddr).call();
 
+                // 計算存款數量與美元價值
                 const depositAmountNum = Number(deposit.amount) / (10 ** assetDecimals[assetName]);
                 const depositUSD = (Number(priceRaw) * depositAmountNum) / 1e8;
 
+                // 將資料動態插入表格
                 depositsTable.innerHTML += `
                     <tr>
                         <td>${assetName}</td>
@@ -133,6 +168,9 @@
                         <td>${depositUSD.toFixed(2)}</td>
                     </tr>`;
             } catch (err) {
+                console.error(`Error fetching data for ${assetName}:`, err);
+
+                // 如果出錯，顯示預設值
                 depositsTable.innerHTML += `
                     <tr>
                         <td>${assetName}</td>
@@ -141,6 +179,7 @@
                     </tr>`;
             }
         }
+
 
             // === 2. 获取用户借款 ===
         for (const [assetName, assetAddr] of Object.entries(assetAddresses)) {
