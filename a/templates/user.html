@@ -19,9 +19,7 @@
                     <th>Value (USD)</th>
                 </tr>
             </thead>
-            <tbody id="depositsTable">
-                <!-- Dynamically populated -->
-            </tbody>
+            <tbody id="depositsTable"></tbody>
         </table>
     </div>
 
@@ -35,9 +33,7 @@
                     <th>Value (USD)</th>
                 </tr>
             </thead>
-            <tbody id="borrowsTable">
-                <!-- Dynamically populated -->
-            </tbody>
+            <tbody id="borrowsTable"></tbody>
         </table>
     </div>
 
@@ -50,9 +46,7 @@
                     <th>Max Borrowable (USD)</th>
                 </tr>
             </thead>
-            <tbody id="borrowableTable">
-                <!-- Dynamically populated -->
-            </tbody>
+            <tbody id="borrowableTable"></tbody>
         </table>
     </div>
 
@@ -62,10 +56,8 @@
 </div>
 
 <script>
-    let activeAssets = [];  // 移動變數宣告至更靠近頂部
-    console.log('Active assets:', activeAssets);
+    let activeAssets = [];
 
-    // 资产地址映射
     const assetAddresses = {
         'ETH': '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
         'USDC': '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8',
@@ -73,7 +65,6 @@
         'WBTC': '0x29f2D40B0605204364af54EC677bD022dA425d03'
     };
 
-    // **新增資產小數位定義**
     const assetDecimals = {
         'ETH': 18,
         'USDC': 6,
@@ -81,54 +72,26 @@
         'WBTC': 8
     };
 
-    // 頁面載入時檢查 userAccount 和 contract，若已連接錢包則讀取資料
     document.addEventListener('DOMContentLoaded', async () => {
-    // 檢查是否連接錢包和合約
-    if (!userAccount || !contract) {
-        document.getElementById('message').textContent = 'Please connect your wallet first!';
-        return;
-    }
-
-    try {
-        // 嘗試獲取 activeAssets 資料
-        activeAssets = await contract.methods.activeAssets().call();
-        console.log('Active assets retrieved:', activeAssets);
-
-        // 檢查 activeAssets 是否為空
-        if (!activeAssets || activeAssets.length === 0) {
-            console.warn('No active assets found.');
-            document.getElementById('message').textContent = 'No active assets found!';
+        if (!userAccount || !contract) {
+            document.getElementById('message').textContent = 'Please connect your wallet first!';
             return;
         }
 
-        // 呼叫 fetchUserData 以加載用戶資料
-        console.log('Calling fetchUserData');
-        await window.fetchUserData();
-        console.log('fetchUserData completed');
+        try {
+            console.log("🔄 Fetching active assets...");
+            activeAssets = await contract.methods.activeAssets(userAccount).call();
+            activeAssets = activeAssets.map(addr => addr.toLowerCase());
+            console.log("✅ Active assets retrieved:", activeAssets);
 
-    } catch (err) {
-        console.error('Error fetching active assets:', err);
-        document.getElementById('message').textContent = 'Failed to load active assets!';
-    }
-});
+            await fetchUserData();
+        } catch (err) {
+            console.error("❌ Failed to fetch active assets:", err);
+            document.getElementById('message').textContent = 'Failed to load active assets!';
+        }
+    });
 
-    try {
-        // 3. 初始化 activeAssets
-        activeAssets = await contract.methods.activeAssets().call();
-        console.log('Active assets:', activeAssets);
-    } catch (err) {
-        console.error('Failed to fetch active assets:', err.message);
-        return;
-    }
-
-    // 4. 呼叫動態填充數據的函數
-    console.log('Calling fetchUserData');
-    await window.fetchUserData();
-    console.log('fetchUserData completed');
-
-    // 5.动态填充数据的函数
-    window.fetchUserData = async function () {
-
+    async function fetchUserData() {
         const messageDiv = document.getElementById('message');
         const depositsTable = document.getElementById('depositsTable');
         const borrowsTable = document.getElementById('borrowsTable');
@@ -139,128 +102,90 @@
         borrowsTable.innerHTML = '';
         borrowableTable.innerHTML = '';
 
-        // === 1. 获取用户存款 ===
-        activeAssets = activeAssets.map(addr => addr.toLowerCase());
+        let hasDeposits = false;
+        let hasBorrows = false;
 
         for (const [assetName, assetAddr] of Object.entries(assetAddresses)) {
             try {
-                // 確認 activeAssets 是否包含該資產地址（小寫比較）
-                if (!activeAssets.includes(assetAddr.toLowerCase())) {
-                    console.warn(`Asset ${assetName} not active. Skipping.`);
-                    continue;
-                }
-
-                console.log(`Fetching data for active asset: ${assetName}`);
-
-                // 從合約中獲取用戶存款資料
+                console.log(`🔄 Checking deposit for: ${assetName}`);
                 const deposit = await contract.methods.userDeposits(assetAddr, userAccount).call();
                 const priceRaw = await contract.methods.getAssetPrice(assetAddr).call();
 
-                // 計算存款數量與美元價值
                 const depositAmountNum = Number(deposit.amount) / (10 ** assetDecimals[assetName]);
                 const depositUSD = (Number(priceRaw) * depositAmountNum) / 1e8;
 
-                // 將資料動態插入表格
-                depositsTable.innerHTML += `
-                    <tr>
-                        <td>${assetName}</td>
-                        <td>${depositAmountNum.toFixed(6)}</td>
-                        <td>${depositUSD.toFixed(2)}</td>
-                    </tr>`;
-            } catch (err) {
-                console.error(`Error fetching data for ${assetName}:`, err);
-
-                // 如果出錯，顯示預設值
-                depositsTable.innerHTML += `
-                    <tr>
-                        <td>${assetName}</td>
-                        <td>0.00</td>
-                        <td>0.00</td>
-                    </tr>`;
-            }
-        }
-
-
-            // === 2. 获取用户借款 ===
-        for (const [assetName, assetAddr] of Object.entries(assetAddresses)) {
-            try {
-                if (!activeAssets.map(addr => addr.toLowerCase()).includes(assetAddr.toLowerCase())) {
-                    console.warn(`Asset ${assetName} not active. Skipping.`);
-                    continue;
+                if (depositAmountNum > 0) {
+                    hasDeposits = true;
+                    depositsTable.innerHTML += `
+                        <tr>
+                            <td>${assetName}</td>
+                            <td>${depositAmountNum.toFixed(6).replace(/\.?0+$/, '')}</td>
+                            <td>${depositUSD.toFixed(2)}</td>
+                        </tr>`;
                 }
+            } catch (err) {
+                console.error(`❌ Error fetching deposit data for ${assetName}:`, err.message);
+            }
 
-                console.log(`Fetching borrow data for asset: ${assetName}`);
-
-                // 呼叫智能合約方法
+            try {
+                console.log(`🔄 Checking borrow data for: ${assetName}`);
                 const borrow = await contract.methods.userBorrows(assetAddr, userAccount).call();
                 const priceRaw = await contract.methods.getAssetPrice(assetAddr).call();
 
-                // 計算數量與金額
                 const borrowAmountNum = Number(borrow.amount) / (10 ** assetDecimals[assetName]);
                 const borrowUSD = (Number(priceRaw) * borrowAmountNum) / 1e8;
 
-                // 將數據填入表格
-                borrowsTable.innerHTML += `
-                    <tr>
-                        <td>${assetName}</td>
-                        <td>${borrowAmountNum.toFixed(6)}</td>
-                        <td>${borrowUSD.toFixed(2)}</td>
-                    </tr>`;
-            } catch (err) {
-                console.error(`Failed to fetch borrow data for ${assetName}:`, err.message);
-
-                // 顯示預設值
-                borrowsTable.innerHTML += `
-                    <tr>
-                        <td>${assetName}</td>
-                        <td>0.00</td>
-                        <td>0.00</td>
-                    </tr>`;
-            }
-        }
-
-
-        // === 3. 获取可借款额度 ===
-        for (const [assetName, assetAddr] of Object.entries(assetAddresses)) {
-            try {
-                if (!activeAssets.map(addr => addr.toLowerCase()).includes(assetAddr.toLowerCase())) {
-                    console.warn(`Asset ${assetName} not active. Skipping.`);
-                    continue;
+                if (borrowAmountNum > 0) {
+                    hasBorrows = true;
+                    borrowsTable.innerHTML += `
+                        <tr>
+                            <td>${assetName}</td>
+                            <td>${borrowAmountNum.toFixed(6).replace(/\.?0+$/, '')}</td>
+                            <td>${borrowUSD.toFixed(2)}</td>
+                        </tr>`;
                 }
-
-                console.log(`Fetching max borrowable data for asset: ${assetName}`);
-
-                // 呼叫智能合約方法，獲取最大可借款額度
-                const { 0: maxAmounts, 1: assets } = await contract.methods.getMaxBorrowableAmounts(userAccount).call();
-
-                // 找到對應資產的索引
-                const index = assets.map(addr => addr.toLowerCase()).indexOf(assetAddr.toLowerCase());
-                if (index === -1) throw new Error('Asset not found in borrowable list');
-
-                // 計算最大可借款金額
-                const maxBorrowAmount = Number(maxAmounts[index]);
-                const priceRaw = await contract.methods.getAssetPrice(assetAddr).call();
-                const borrowableUSD = (Number(priceRaw) * maxBorrowAmount) / (10 ** assetDecimals[assetName]) / 1e8;
-
-                // 填入表格
-                borrowableTable.innerHTML += `
-                    <tr>
-                        <td>${assetName}</td>
-                        <td>${maxBorrowAmount.toFixed(6)}</td>
-                        <td>${borrowableUSD.toFixed(2)}</td>
-                    </tr>`;
             } catch (err) {
-                console.error(`Failed to fetch borrow availability for ${assetName}:`, err.message);
-
-                // 顯示預設值
-                borrowableTable.innerHTML += `
-                    <tr>
-                        <td>${assetName}</td>
-                        <td>0.00</td>
-                        <td>0.00</td>
-                    </tr>`;
+                console.error(`❌ Error fetching borrow data for ${assetName}:`, err.message);
             }
         }
+
+        if (!hasBorrows) {
+            borrowsTable.innerHTML = `<tr><td colspan="3" style="text-align:center;">No borrows found</td></tr>`;
+        }
+
+        if (!hasDeposits) {
+            borrowableTable.innerHTML = `<tr><td colspan="2" style="text-align:center;">No deposits found, borrow availability is 0</td></tr>`;
+            messageDiv.textContent = 'No deposits found, you need to deposit assets first!';
+            return;
+        }
+
+        try {
+            console.log("🔄 Fetching max borrowable amounts...");
+            let maxBorrowableAmounts = await contract.methods.getMaxBorrowableAmounts(userAccount).call();
+            console.log("✅ Max borrowable:", maxBorrowableAmounts);
+
+            if (maxBorrowableAmounts[0].length === 0) {
+                borrowableTable.innerHTML = `<tr><td colspan="2" style="text-align:center;">No borrowable assets</td></tr>`;
+            } else {
+                for (let i = 0; i < maxBorrowableAmounts[0].length; i++) {
+                    const assetAddress = maxBorrowableAmounts[1][i];
+                    const assetName = Object.keys(assetAddresses).find(key => assetAddresses[key].toLowerCase() === assetAddress.toLowerCase());
+                    const maxAmount = maxBorrowableAmounts[0][i] / (10 ** assetDecimals[assetName]);
+
+                    borrowableTable.innerHTML += `
+                        <tr>
+                            <td>${assetName}</td>
+                            <td>${maxAmount.toFixed(6).replace(/\.?0+$/, '')}</td>
+                        </tr>`;
+                }
+            }
+        } catch (err) {
+            console.error("❌ getMaxBorrowableAmounts() failed:", err.message);
+            borrowableTable.innerHTML = `<tr><td colspan="2" style="text-align:center;">Error fetching data</td></tr>`;
+        }
+
+        messageDiv.textContent = 'Data Loaded!';
+        console.log("✅ Data successfully loaded.");
     }
 </script>
 {% endblock %}
