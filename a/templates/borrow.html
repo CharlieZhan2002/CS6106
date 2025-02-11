@@ -19,7 +19,7 @@
               <select name="borrow_asset" id="borrow_asset">
                   <option value="ETH">ETH</option>
                   <option value="USDC">USDC</option>
-                  <option value="USDT">USDT</option>
+                  <option value="DAI">DAI</option>
                   <option value="WBTC">WBTC</option>
               </select>
           </div>
@@ -28,7 +28,7 @@
               <select name="collateral_asset" id="collateral_asset">
                   <option value="ETH">ETH</option>
                   <option value="USDC">USDC</option>
-                  <option value="USDT">USDT</option>
+                  <option value="DAI">DAI</option>
                   <option value="WBTC">WBTC</option>
               </select>
           </div>
@@ -49,7 +49,7 @@
   const assetAddresses = {
       'ETH':  '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',  // 若合约中规定的 ETH "地址"
       'USDC': '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8',  // 示例
-      'USDT': '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0',
+      'DAI': '0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357',
       'WBTC': '0x29f2D40B0605204364af54EC677bD022dA425d03'
   };
 
@@ -78,7 +78,7 @@
 
         // 不同代币的 decimals
         let decimals = 18;
-        if (borrowAsset === 'USDC' || borrowAsset === 'USDT') {
+        if (borrowAsset === 'USDC') {
           decimals = 6;
         } else if (borrowAsset === 'WBTC') {
           decimals = 8;
@@ -132,3 +132,4 @@
   });
 </script>
 {% endblock %}
+
