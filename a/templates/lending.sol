@@ -17,16 +17,21 @@ contract EnhancedLendingProtocol is ReentrancyGuard, Ownable {
         bool isActive;
     }
 
+    //store user deposit info
     struct UserDeposit {
         uint256 amount;
         uint256 lastUpdateTimestamp;
     }
 
+    //store user borrow info
     struct UserBorrow {
         uint256 amount;
         uint256 lastUpdateTimestamp;
     }
 
+    //assetInfo: 儲存每個資產地址對應的資產資訊。
+    //userDeposits: 儲存用戶針對每個資產的存款資訊。
+    //userBorrows: 儲存用戶針對每個資產的借款資訊。
     mapping(address => AssetInfo) public assetInfo;
     mapping(address => mapping(address => UserDeposit)) public userDeposits;
     mapping(address => mapping(address => UserBorrow)) public userBorrows;
@@ -34,7 +39,7 @@ contract EnhancedLendingProtocol is ReentrancyGuard, Ownable {
     address public constant WBTC = address(0x29f2D40B0605204364af54EC677bD022dA425d03);
     address public constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
     address public constant USDC = address(0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8);
-    address public constant USDT = address(0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0);
+    address public constant DAI = address(0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357);
 
     uint256 public constant LIQUIDATION_THRESHOLD = 150; // 150% collateralization ratio
     uint256 public constant LIQUIDATION_BONUS = 2; // 2% bonus for liquidators
@@ -43,20 +48,23 @@ contract EnhancedLendingProtocol is ReentrancyGuard, Ownable {
 
     // Chainlink Price Feed Addresses on Sepolia Testnet
     address public constant USDC_USD_PRICE_FEED = 0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E;
-    address public constant USDT_USD_PRICE_FEED = 0xa82486565B8DCE64BFfaF1264BbC6197fb56fe9c;
+    address public constant DAI_USD_PRICE_FEED = 0x14866185B1962B63C3Ea9E03Bc1da838bab34C19;
     address public constant ETH_USD_PRICE_FEED = 0x694AA1769357215DE4FAC081bf1f309aDC325306;
     address public constant BTC_USD_PRICE_FEED = 0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43;
 
     constructor() Ownable(msg.sender) {
         // Initialize asset price feeds
         initializeAsset(USDC, USDC, USDC_USD_PRICE_FEED);
-        initializeAsset(USDT, USDT, USDT_USD_PRICE_FEED);
+        initializeAsset(DAI, DAI, DAI_USD_PRICE_FEED);
         initializeAsset(ETH, ETH, ETH_USD_PRICE_FEED);
         initializeAsset(WBTC, WBTC, BTC_USD_PRICE_FEED);
     }
 
+    //用來存儲所有已初始化資產的地址
     address[] public activeAssets;
+    //初始化資產的基本設定，包括資產的 ERC-20 代幣介面和價格餵價地址
     function initializeAsset(address asset, address tokenAddress, address priceFeedAddress) public onlyOwner {
+        //檢查該資產是否已經被初始化
         require(!assetInfo[asset].isActive, "Asset already initialized");
         assetInfo[asset].token = IERC20(tokenAddress);
         assetInfo[asset].priceFeed = AggregatorV3Interface(priceFeedAddress);
