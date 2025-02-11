@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <title>Borrow - Lending Protocol</title>
+
 <header>
   <div class="container">
       <h1>Borrow from Our Lending Protocol</h1>
@@ -45,12 +46,20 @@
 
 <script>
 
-  // 如果你要用到 assetAddresses，需要在这里定义或在 base.html 定义
+  // 资产地址映射
   const assetAddresses = {
-      'ETH':  '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',  // 若合约中规定的 ETH "地址"
-      'USDC': '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8',  // 示例
+      'ETH':  '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+      'USDC': '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8',
       'DAI': '0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357',
       'WBTC': '0x29f2D40B0605204364af54EC677bD022dA425d03'
+  };
+
+  // 资产小数位
+  const assetDecimals = {
+      'ETH': 18,
+      'USDC': 6,
+      'DAI': 18,
+      'WBTC': 8
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -76,45 +85,45 @@
         const borrowAssetAddress     = assetAddresses[borrowAsset];
         const collateralAssetAddress = assetAddresses[collateralAsset];
 
-        // 不同代币的 decimals
-        let decimals = 18;
-        if (borrowAsset === 'USDC') {
-          decimals = 6;
-        } else if (borrowAsset === 'WBTC') {
-          decimals = 8;
-        }
+        // 3. 获取资产的 decimal（默认 18）
+        const decimals = assetDecimals[borrowAsset] || 18;
 
-        // 3. 转换 borrowAmount => Wei/最小单位
-        const weiAmount = web3.utils.toBN(borrowAmount).mul(
-          web3.utils.toBN(10).pow(web3.utils.toBN(decimals))
-        );
+        // 4. 转换 borrowAmount => Wei/最小单位
+        const weiAmount = BigInt(Math.floor(parseFloat(borrowAmount) * (10 ** decimals)));
 
-        // 4. 检查抵押品是否需要 approve
-        // 如果 collateralAsset 是 ETH，就不需要 balanceOf/approve
+        console.log(`🔹 Converted ${borrowAmount} ${borrowAsset} to ${weiAmount} (in wei)`);
+
+        // 5. 检查抵押品是否需要 approve
         if (collateralAsset !== 'ETH') {
           const collateralContract = new web3.eth.Contract(ERC20_ABI, collateralAssetAddress);
           const balance   = await collateralContract.methods.balanceOf(userAccount).call();
           const allowance = await collateralContract.methods.allowance(userAccount, contractAddress).call();
 
-          // 如果余额不足，抛错
-          if (web3.utils.toBN(balance).lt(weiAmount)) {
+          console.log(`🔹 Collateral Balance: ${balance}, Allowance: ${allowance}`);
+
+          // 余额不足
+          if (BigInt(balance) < weiAmount) {
             throw new Error('Insufficient collateral balance');
           }
 
           // 如果 allowance 不够，则先 approve
-          if (web3.utils.toBN(allowance).lt(weiAmount)) {
+          if (BigInt(allowance) < weiAmount) {
+            console.log("🔹 Approving collateral...");
             await collateralContract.methods
               .approve(contractAddress, weiAmount)
               .send({ from: userAccount });
           }
         }
 
-        // 5. 估算 gas
+        // 6. 估算 gas
+        console.log("🔹 Estimating gas for borrow transaction...");
         const gasEstimate = await contract.methods
           .borrow(borrowAssetAddress, collateralAssetAddress, weiAmount)
           .estimateGas({ from: userAccount });
 
-        // 6. 发起借款交易
+        console.log(`🔹 Estimated gas: ${gasEstimate}`);
+
+        // 7. 发起借款交易
         const txResult = await contract.methods
           .borrow(borrowAssetAddress, collateralAssetAddress, weiAmount)
           .send({
@@ -122,14 +131,15 @@
             gas: Math.floor(gasEstimate * 1.2) // 增加 20% buffer
           });
 
-        messageDiv.textContent = `Successfully borrowed ${borrowAmount} ${borrowAsset} using ${collateralAsset} as collateral.\nTx hash: ${txResult.transactionHash}`;
+        messageDiv.textContent = `✅ Successfully borrowed ${borrowAmount} ${borrowAsset} using ${collateralAsset} as collateral.
+        \n📜 Tx hash: ${txResult.transactionHash}`;
 
       } catch (error) {
-        console.error('Error:', error);
-        messageDiv.textContent = 'Error: ' + error.message;
+        console.error('❌ Error:', error);
+        messageDiv.textContent = '❌ Error: ' + error.message;
       }
     });
   });
+
 </script>
 {% endblock %}
-
