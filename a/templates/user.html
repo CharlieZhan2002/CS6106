@@ -174,7 +174,8 @@
                 for (let i = 0; i < maxBorrowableAmounts[0].length; i++) {
                     const assetAddress = maxBorrowableAmounts[1][i];
                     const assetName = Object.keys(assetAddresses).find(key => assetAddresses[key].toLowerCase() === assetAddress.toLowerCase());
-                    const maxAmount = maxBorrowableAmounts[0][i] / (10 ** assetDecimals[assetName]);
+                    const maxAmount = maxBorrowableAmounts[0][i] / 1e18;
+
 
                     borrowableTable.innerHTML += `
                         <tr>
