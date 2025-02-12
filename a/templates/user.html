@@ -43,7 +43,7 @@
             <thead>
                 <tr>
                     <th>Asset</th>
-                    <th>Max Borrowable (USD)</th>
+                    <th>Max Borrowable (Amount)</th>
                 </tr>
             </thead>
             <tbody id="borrowableTable"></tbody>
@@ -72,7 +72,9 @@
         'WBTC': 8
     };
 
+    
     document.addEventListener('DOMContentLoaded', async () => {
+        
         if (!userAccount || !contract) {
             document.getElementById('message').textContent = 'Please connect your wallet first!';
             return;
@@ -135,7 +137,7 @@
                 const priceRaw = await contract.methods.getAssetPrice(assetAddr).call();
 
                 const borrowAmountNum = Number(borrow.amount) / (10 ** assetDecimals[assetName]);
-                const borrowUSD = (Number(priceRaw) * borrowAmountNum) / 1e8;
+                const borrowUSD = (Number(priceRaw) * borrowAmountNum)/ 1e8;
 
                 if (borrowAmountNum > 0) {
                     hasBorrows = true;
