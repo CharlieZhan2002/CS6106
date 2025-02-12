@@ -1,40 +1,115 @@
 {% extends 'base.html' %}
 {% block content %}
 <title>Admin - Lending Protocol</title>
-    <header>
-        <div class="container">
-            <h1>Admin Dashboard</h1>
-        </div>
-    </header>
-    
+
+<header>
     <div class="container">
-        <div class="description">
-            <p>Manage and configure the lending protocol settings. Only authorized administrators should access this page.</p>
-        </div>
-        
-        <div class="admin-form">
-            <h2>Initialize Asset</h2>
-            <form action="/admin" method="post">
-                <div class="form-group">
-                    <label for="asset">Asset:</label>
-                    <input type="text" name="asset" id="asset" required>
-                </div>
-                <div class="form-group">
-                    <label for="token_address">Token Address:</label>
-                    <input type="text" name="token_address" id="token_address" required>
-                </div>
-                <div class="form-group">
-                    <label for="price_feed">Price Feed Address:</label>
-                    <input type="text" name="price_feed" id="price_feed" required>
-                </div>
-                <button type="submit" name="action" value="initialize">Initialize Asset</button>
-            </form>
-        </div>
-        
-        <div id="message"></div>
+        <h1>Admin Dashboard</h1>
+    </div>
+</header>
+
+<div class="container">
+    <div class="description">
+        <p>Manage and configure the lending protocol settings. Only authorized administrators should access this page.</p>
     </div>
 
-    <script>
-        // 這裡可以添加任何必要的 JavaScript 代碼
-    </script>
+    <div class="admin-form">
+        <h2>Initialize Asset</h2>
+        <form id="asset-form">
+            <div class="form-group">
+                <label for="asset">Asset:</label>
+                <input type="text" name="asset" id="asset" required placeholder="Token Symbol (e.g., USDC)">
+            </div>
+            <div class="form-group">
+                <label for="token_address">Token Address:</label>
+                <input type="text" name="token_address" id="token_address" required placeholder="ERC20 Address">
+            </div>
+            <div class="form-group">
+                <label for="price_feed">Price Feed Address:</label>
+                <input type="text" name="price_feed" id="price_feed" required placeholder="Chainlink Oracle Address">
+            </div>
+            <button type="submit">Initialize Asset</button>
+        </form>
+    </div>
+
+    <h2>Active Assets</h2>
+    <table border="1" id="asset-table">
+        <thead>
+            <tr>
+                <th>Asset</th>
+                <th>Token Address</th>
+                <th>Price Feed</th>
+                <th>Last Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asset in assets %}
+            <tr>
+                <td>{{ asset.name }}</td>
+                <td>{{ asset.token_address }}</td>
+                <td>{{ asset.price_feed }}</td>
+                <td>{{ asset.last_update }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="message"></div>
+</div>
+
+<script>
+    document.getElementById('asset-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        let formData = new FormData(this);
+        
+        // 验证地址格式
+        function isValidAddress(address) {
+            return /^0x[a-fA-F0-9]{40}$/.test(address);
+        }
+
+        let asset = document.getElementById('asset').value;
+        let tokenAddress = document.getElementById('token_address').value;
+        let priceFeed = document.getElementById('price_feed').value;
+
+        if (!isValidAddress(tokenAddress) || !isValidAddress(priceFeed)) {
+            alert("Invalid Ethereum address format!");
+            return;
+        }
+
+        fetch('/admin', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('message').innerText = data.message;
+            if (data.success) {
+                setTimeout(() => location.reload(), 1000);  // 刷新页面以更新资产表格
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    function fetchAssets() {
+        fetch('/assets')
+            .then(response => response.json())
+            .then(data => {
+                let tableBody = document.getElementById('asset-table').getElementsByTagName('tbody')[0];
+                tableBody.innerHTML = "";
+                data.forEach(asset => {
+                    let row = `<tr>
+                        <td>${asset.name}</td>
+                        <td>${asset.token_address}</td>
+                        <td>${asset.price_feed}</td>
+                        <td>${asset.last_update}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            })
+            .catch(error => console.error('Error fetching assets:', error));
+    }
+
+    window.onload = fetchAssets;
+</script>
+
 {% endblock %}
