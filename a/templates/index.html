@@ -12,9 +12,16 @@
     
     <section class="asset-prices">
         <h2>Supported Assets and Market Prices</h2>
-        <div class="price-list" id="price-list">
-            <!-- Asset prices and icons will be dynamically loaded here -->
+        <div class="price-list" id="price-list"></div>
+    </section>
+
+    <section class="market-chart">
+        <h2>Crypto Market Trends</h2>
+        <div class="chart-controls">
+            <label>Select Asset:</label>
+            <div id="chart-asset-buttons"></div>
         </div>
+        <canvas id="priceChart"></canvas>
     </section>
 </div>
 
@@ -39,47 +46,120 @@
         height: 50px;
         margin-bottom: 10px;
     }
-    .price-item h3 {
-        font-size: 1.2rem;
-        margin: 10px 0;
+    .market-chart {
+        margin-top: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
-    .price-item p {
-        font-size: 1rem;
-        color: green;
+    .chart-controls {
+        margin-bottom: 10px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .chart-controls button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .chart-controls button.active {
+        background: #0056b3;
     }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/web3"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // 币种数据：包含名称、图标和价格预言机地址
     const assets = {
-        ETH: { 
-            name: 'Ethereum', 
-            icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', 
-            priceFeedAddress: '0x694AA1769357215DE4FAC081bf1f309aDC325306' 
-        },
-        USDC: { 
-            name: 'USD Coin', 
-            icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png', 
-            priceFeedAddress: '0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E' 
-        },
-        DAI: { 
-            name: 'DAI', 
-            icon: 'https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png', 
-            priceFeedAddress: '0x14866185B1962B63C3Ea9E03Bc1da838bab34C19' 
-        },
-        WBTC: { 
-            name: 'Wrapped Bitcoin', 
-            icon: 'https://cryptologos.cc/logos/wrapped-bitcoin-wbtc-logo.png', 
-            priceFeedAddress: '0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43' 
-        }
+        ETH: { name: 'Ethereum', icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', priceFeedAddress: '0x694AA1769357215DE4FAC081bf1f309aDC325306' },
+        USDC: { name: 'USD Coin', icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png', priceFeedAddress: '0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E' },
+        DAI: { name: 'DAI', icon: 'https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png', priceFeedAddress: '0x14866185B1962B63C3Ea9E03Bc1da838bab34C19' },
+        WBTC: { name: 'Wrapped Bitcoin', icon: 'https://cryptologos.cc/logos/wrapped-bitcoin-wbtc-logo.png', priceFeedAddress: '0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43' }
     };
 
     const priceListElement = document.getElementById('price-list');
 
-    const priceFeedABI = [
-        {
-            "inputs": [],
-            "name": "latestRoundData",
+    async function loadPrices() {
+        if (typeof window.ethereum !== 'undefined') {
+            const web3 = new Web3(window.ethereum);
+            priceListElement.innerHTML = '';
+            for (const asset in assets) {
+                const priceItem = document.createElement('div');
+                priceItem.className = 'price-item';
+                priceItem.innerHTML = `
+                    <img src="${assets[asset].icon}" alt="${assets[asset].name} Logo">
+                    <h3>${assets[asset].name}</h3>
+                    <p>Loading price...</p>
+                `;
+                priceListElement.appendChild(priceItem);
+                loadAssetPrice(web3, asset, priceItem);
+            }
+        } else {
+            console.log('Please install MetaMask to load prices.');
+        }
+    }
+
+    async function loadAssetPrice(web3, asset, priceItem) {
+        try {
+            const priceFeedABI = [{
+                "inputs": [], "name": "latestRoundData", "outputs": [
+                    { "internalType": "uint80", "name": "roundId", "type": "uint80" },
+                    { "internalType": "int256", "name": "answer", "type": "int256" },
+                    { "internalType": "uint256", "name": "updatedAt", "type": "uint256" }
+                ],
+                "stateMutability": "view", "type": "function"
+            }];
+            const priceFeed = new web3.eth.Contract(priceFeedABI, assets[asset].priceFeedAddress);
+            const result = await priceFeed.methods.latestRoundData().call();
+            const price = (Number(result.answer) / 1e8).toFixed(2);
+            priceItem.innerHTML = `<img src="${assets[asset].icon}" alt="${assets[asset].name} Logo"><h3>${assets[asset].name}</h3><p>$${price}</p>`;
+        } catch (error) {
+            console.error(`Error loading ${asset} price:`, error);
+        }
+    }
+
+    window.addEventListener('load', loadPrices);
+
+    // Chart setup
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    let priceChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Price (USD)', data: [], borderColor: 'blue', borderWidth: 2, fill: false }] },
+        options: { responsive: true, scales: { x: { display: true }, y: { display: true } } }
+    });
+
+    // Add buttons for selecting assets
+    const buttonContainer = document.getElementById('chart-asset-buttons');
+    for (const asset in assets) {
+        const button = document.createElement('button');
+        button.textContent = assets[asset].name;
+        button.onclick = () => {
+            document.querySelectorAll('.chart-controls button').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            fetchHistoricalData(asset);
+        };
+        buttonContainer.appendChild(button);
+    }
+
+    async function fetchHistoricalData(asset) {
+        const web3 = new Web3(window.ethereum);
+        const priceFeedABI = [{
+            "inputs": [], "name": "latestRoundData", "outputs": [
+                { "internalType": "uint80", "name": "roundId", "type": "uint80" },
+                { "internalType": "int256", "name": "answer", "type": "int256" },
+                { "internalType": "uint256", "name": "startedAt", "type": "uint256" },
+                { "internalType": "uint256", "name": "updatedAt", "type": "uint256" },
+                { "internalType": "uint80", "name": "answeredInRound", "type": "uint80" }
+            ],
+            "stateMutability": "view", "type": "function"
+        }, {
+            "inputs": [{ "internalType": "uint80", "name": "roundId", "type": "uint80" }],
+            "name": "getRoundData",
             "outputs": [
                 { "internalType": "uint80", "name": "roundId", "type": "uint80" },
                 { "internalType": "int256", "name": "answer", "type": "int256" },
@@ -89,61 +169,38 @@
             ],
             "stateMutability": "view",
             "type": "function"
-        }
-    ];
+        }];
 
-    // 加载资产价格
-    async function loadPrices(web3) {
-        priceListElement.innerHTML = '';
-        for (const asset in assets) {
-            const priceItem = document.createElement('div');
-            priceItem.className = 'price-item';
-            priceItem.innerHTML = `
-                <img src="${assets[asset].icon}" alt="${assets[asset].name} Logo">
-                <h3>${assets[asset].name}</h3>
-                <p>Loading price...</p>
-            `;
-            priceListElement.appendChild(priceItem);
-            loadAssetPrice(web3, asset, priceItem);
-        }
-    }
+        const priceFeed = new web3.eth.Contract(priceFeedABI, assets[asset].priceFeedAddress);
 
-    // 获取单个资产价格
-    async function loadAssetPrice(web3, asset, priceItem) {
         try {
-            const priceFeed = new web3.eth.Contract(priceFeedABI, assets[asset].priceFeedAddress);
-            const result = await priceFeed.methods.latestRoundData().call();
-            console.log(`${asset} price data:`, result);
-            const price = (Number(result.answer) / 1e8).toFixed(2);
-            priceItem.innerHTML = `
-                <img src="${assets[asset].icon}" alt="${assets[asset].name} Logo">
-                <h3>${assets[asset].name}</h3>
-                <p>$${price}</p>
-            `;
+            let labels = [];
+            let data = [];
+
+            // 获取最新 roundId
+            const latestRound = await priceFeed.methods.latestRoundData().call();
+            let roundId = BigInt(latestRound.roundId); // 最新 roundId
+            
+            for (let i = 0; i < 10; i++) { // 获取 10 条数据
+                const roundData = await priceFeed.methods.getRoundData(roundId.toString()).call();
+                
+                const price = (Number(roundData.answer) / 1e8).toFixed(2);
+                const timestamp = new Date(Number(roundData.updatedAt) * 1000).toLocaleTimeString();
+
+                data.unshift(price);
+                labels.unshift(timestamp);
+
+                roundId -= BigInt(1); // 向前回溯 roundId
+            }
+
+            // 更新图表
+            priceChart.data.labels = labels;
+            priceChart.data.datasets[0].data = data;
+            priceChart.update();
+
         } catch (error) {
-            console.error(`Error loading ${asset} price:`, error);
-            priceItem.innerHTML = `
-                <img src="${assets[asset].icon}" alt="${assets[asset].name} Logo">
-                <h3>${assets[asset].name}</h3>
-                <p>Failed to load price</p>
-            `;
+            console.error(`Error loading ${asset} price history:`, error);
         }
     }
-
-    // 初始化 Web3 并加载价格
-    async function initWeb3() {
-        if (typeof window.ethereum !== 'undefined') {
-            const web3 = new Web3(window.ethereum);
-            loadPrices(web3);
-        } else {
-            console.log('Please install MetaMask to load prices.');
-        }
-    }
-
-    // 页面加载时初始化
-    window.addEventListener('load', () => {
-        initWeb3();
-    });
 </script>
 {% endblock %}
-
